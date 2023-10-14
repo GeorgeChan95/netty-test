@@ -70,7 +70,7 @@ public class WorkerServer implements Runnable{
 
     @Override
     public void run() {
-        while (true) {
+        while (true) { // 这里不写 while（true）循环调用，线程直接旧运行结束了
             try {
                 // 阻塞获取客户端事件
                 selector.select();
