@@ -1,4 +1,4 @@
-package com.george.netty.c3;
+package com.george.netty.c3.bossworker;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
