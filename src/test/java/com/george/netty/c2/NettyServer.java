@@ -30,7 +30,7 @@ public class NettyServer {
                 .group(new NioEventLoopGroup())
                 // 选择 服务器的 ServerSocketChannel 实现
                 .channel(NioServerSocketChannel.class)
-                // 服务端使用 NioServerSocketChannel
+                // 添加处理器（添加的处理器都是给 SocketChannel 用的，而不是给 ServerSocketChannel）
                 .childHandler(
                         // channel 代表和客户端进行数据读写的通道 Initializer 初始化，负责添加别的 handler
                         new ChannelInitializer<NioSocketChannel>() {
@@ -38,9 +38,9 @@ public class NettyServer {
                             protected void initChannel(NioSocketChannel ch) throws Exception {
                                 // netty自带的日志处理handler
                                 ch.pipeline().addLast(new LoggingHandler());
-                                // 解码器，将ByteBuf转成字符串
+                                // 解码器（解码 ByteBuf => String）
                                 ch.pipeline().addLast(new StringDecoder());
-                                // 自定义 handler
+                                // 自定义 handler（SocketChannel 的业务处理器，使用上一个处理器的处理结果）
                                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
