@@ -2,13 +2,12 @@ package com.george.advance;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +16,15 @@ import java.nio.charset.Charset;
 
 /**
  * <p>
- * 固定分隔符切分消息
+ *     基于长度字段帧的解析
+ *     https://www.cnblogs.com/java-chen-hao/p/11571229.html
  * </p>
  *
  * @author George
- * @date 2023.10.28 15:41
+ * @date 2023.10.28 18:04
  */
 @Slf4j
-public class FixedDelimiterServer {
+public class LengthFieldServer {
     public static void main(String[] args) {
         NioEventLoopGroup boss = new NioEventLoopGroup();
         NioEventLoopGroup worker = new NioEventLoopGroup();
@@ -35,18 +35,14 @@ public class FixedDelimiterServer {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
-                        // 服务端添加固定长度解码器，设置解析字节长度为10字节。
-                        ByteBuf delimiter1 = ByteBufAllocator.DEFAULT.buffer().writeBytes("\n".getBytes());
-                        ByteBuf delimiter2 = ByteBufAllocator.DEFAULT.buffer().writeBytes("\t".getBytes());
-                        ByteBuf delimiter3 = ByteBufAllocator.DEFAULT.buffer().writeBytes("@".getBytes());
-                        /**
-                         * 参数1024表示单条消息的最大长度，当达到该长度仍然没有找到分隔符就抛出TooLongFrame异常，第二个参数就是分隔符
-                         * 第一个true：表示要对解码后的消息去掉分隔符
-                         * 第二个true：表示如果为true，则只要解码器注意到帧的长度将超过maxFrameLength，就会立即抛出TooLongFrameException。
-                         *             如果为false，则在超过的整个帧之后引发TooLongFrameException
-                         * delimiter1, delimiter2, delimiter3：表示自定义的多个分隔符，默认分隔符为：\n 或者 \r\n
+                        // 基于长度字段帧的解析，具体见：https://www.cnblogs.com/java-chen-hao/p/11571229.html
+                        /*
+                        lengthFieldOffset=0：开始的1个字节就是长度域，所以不需要长度域偏移。
+                        lengthFieldLength=4：长度域4个字节。
+                        lengthAdjustment=-4：数据长度修正为-4，因为长度域除了包含数据的长度12，还包含了长度字段本身4字节，所以需要减4。
+                        initialBytesToStrip=4：发送的数据有消息本身和消息长度(4字节)，而接收的数据只有需要消息，所以需要跳过4字节。
                          */
-                        ch.pipeline().addLast(new DelimiterBasedFrameDecoder(1024, true, true, delimiter1, delimiter2, delimiter3));
+                        ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024, 0, 4, -4, 4));
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             /**
                              * 连接成功后调用
