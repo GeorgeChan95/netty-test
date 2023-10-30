@@ -40,7 +40,8 @@ public class LengthFieldServer {
                         lengthFieldOffset=0：开始的1个字节就是长度域，所以不需要长度域偏移。
                         lengthFieldLength=4：长度域4个字节。
                         lengthAdjustment=-4：数据长度修正为-4，因为长度域除了包含数据的长度12，还包含了长度字段本身4字节，所以需要减4。
-                        initialBytesToStrip=4：发送的数据有消息本身和消息长度(4字节)，而接收的数据只有需要消息，所以需要跳过4字节。
+                        initialBytesToStrip=4：发送的数据有消息本身和消息长度(4字节)，而接收的数据只有需要消息，所以需要跳过4
+                        1030字节。
                          */
                         ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024, 0, 4, -4, 4));
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
