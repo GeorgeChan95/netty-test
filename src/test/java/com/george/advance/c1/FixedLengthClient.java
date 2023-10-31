@@ -1,4 +1,4 @@
-package com.george.advance;
+package com.george.advance.c1;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -14,14 +14,14 @@ import java.util.Random;
 
 /**
  * <p>
- * 固定分隔符切分消息
+ * 固定长度消息分割
  * </p>
  *
  * @author George
- * @date 2023.10.28 15:41
+ * @date 2023.10.28 13:51
  */
 @Slf4j
-public class FixedDelimiterClient {
+public class FixedLengthClient {
     public static void main(String[] args) {
         NioEventLoopGroup worker = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();
@@ -42,17 +42,16 @@ public class FixedDelimiterClient {
                                 char c = 'a';
                                 ByteBuf buffer = ctx.alloc().buffer();
                                 for (int i = 0; i < 10; i++) {
-                                    for (int j = 0; j < r.nextInt(8) + 1; j++) {
-                                        buffer.writeByte((byte) c);
+                                    byte[] bytes = new byte[8];
+                                    for (int j = 0; j < r.nextInt(8); j++) {
+                                        bytes[j] = (byte) c;
                                     }
-                                    buffer.writeByte((byte) '@');
-//                                    buffer.writeByte((byte)'\n');
-//                                    buffer.writeByte((byte)'\t');
                                     c++;
+                                    buffer.writeBytes(bytes);
                                 }
                                 ctx.writeAndFlush(buffer);
                                 super.channelActive(ctx);
-//                                ctx.close();
+                                ctx.close();
                             }
 
                             @Override

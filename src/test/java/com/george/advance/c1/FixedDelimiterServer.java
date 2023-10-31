@@ -1,4 +1,4 @@
-package com.george.advance;
+package com.george.advance.c1;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;

@@ -1,4 +1,4 @@
-package com.george.advance;
+package com.george.advance.c1;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -14,14 +14,15 @@ import java.util.Random;
 
 /**
  * <p>
- * 固定长度消息分割
+ *     基于长度字段帧的解析
+ *     https://www.cnblogs.com/java-chen-hao/p/11571229.html
  * </p>
  *
  * @author George
- * @date 2023.10.28 13:51
+ * @date 2023.10.28 18:09
  */
 @Slf4j
-public class FixedLengthClient {
+public class LengthFieldClient {
     public static void main(String[] args) {
         NioEventLoopGroup worker = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();
@@ -37,21 +38,15 @@ public class FixedLengthClient {
                             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                 log.info("InboundHandler channelActive...");
                                 log.debug("sending...");
-                                // 发送内容随机的数据包
-                                Random r = new Random();
-                                char c = 'a';
                                 ByteBuf buffer = ctx.alloc().buffer();
-                                for (int i = 0; i < 10; i++) {
-                                    byte[] bytes = new byte[8];
-                                    for (int j = 0; j < r.nextInt(8); j++) {
-                                        bytes[j] = (byte) c;
-                                    }
-                                    c++;
-                                    buffer.writeBytes(bytes);
-                                }
+                                // 写入长度字段（长度字段占4字节 + 内容占12字节）
+                                int length = "Hello, World".length() + 4;
+                                buffer.writeInt(length);
+                                // 写入消息体， 12个字节长度
+                                buffer.writeBytes("Hello, World".getBytes());
                                 ctx.writeAndFlush(buffer);
                                 super.channelActive(ctx);
-                                ctx.close();
+//                                ctx.close();
                             }
 
                             @Override

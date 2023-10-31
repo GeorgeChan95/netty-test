@@ -1,6 +1,7 @@
-package com.george.advance;
+package com.george.advance.c1;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -9,26 +10,24 @@ import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 
 /**
  * <p>
- *     测试半包现象
- *     客户端分1次向服务端发送160字节的数据，服务端却分两次接收到了消息，一次是20字节，一次是140字节
+ * 测试粘包现象
+ * 客户端分10次向服务端发送160字节的数据，服务端却仅是一次接收到160字节数据
  * </p>
  *
  * @author George
- * @date 2023.10.24 12:28
+ * @date 2023.10.24 12:24
  */
 @Slf4j
-public class HalfBagServer {
+public class StickyBagServer {
     public static void main(String[] args) {
         NioEventLoopGroup boss = new NioEventLoopGroup();
         NioEventLoopGroup worker = new NioEventLoopGroup();
 
-        ServerBootstrap serverBootstrap = new ServerBootstrap();
-        // 设置服务端接收数据缓冲区大小
-        serverBootstrap.option(ChannelOption.SO_RCVBUF, 10);
-        ChannelFuture channelFuture = serverBootstrap
+        ChannelFuture channelFuture = new ServerBootstrap()
                 .group(boss, worker)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -59,6 +58,15 @@ public class HalfBagServer {
                             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                 log.info("disconnect...");
                                 super.channelInactive(ctx);
+                            }
+
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                log.info("channel read...");
+                                ByteBuf msgBuf = (ByteBuf) msg;
+                                String msgStr = msgBuf.toString(StandardCharsets.UTF_8);
+                                log.info("{}", msgStr);
+                                super.channelRead(ctx, msg);
                             }
                         });
                     }

@@ -1,54 +1,57 @@
-package com.george.advance;
+package com.george.advance.c1;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.FixedLengthFrameDecoder;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.nio.charset.Charset;
+import java.net.SocketAddress;
 
 /**
  * <p>
- * 固定长度分隔
+ *     测试半包现象
+ *     客户端分1次向服务端发送160字节的数据，服务端却分两次接收到了消息，一次是20字节，一次是140字节
  * </p>
  *
  * @author George
- * @date 2023.10.28 09:31
+ * @date 2023.10.24 12:28
  */
 @Slf4j
-public class FixedLengthServer {
+public class HalfBagServer {
     public static void main(String[] args) {
         NioEventLoopGroup boss = new NioEventLoopGroup();
         NioEventLoopGroup worker = new NioEventLoopGroup();
+
         ServerBootstrap serverBootstrap = new ServerBootstrap();
-        ChannelFuture channelFuture = serverBootstrap.group(boss, worker)
+        // 设置服务端接收数据缓冲区大小
+        serverBootstrap.option(ChannelOption.SO_RCVBUF, 10);
+        ChannelFuture channelFuture = serverBootstrap
+                .group(boss, worker)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+                        ch.pipeline().addLast(new LoggingHandler());
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             /**
-                             * 连接成功后调用
+                             * 连接建立时
                              * @param ctx
                              * @throws Exception
                              */
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                 log.info("connected...");
+                                Channel channel = ctx.channel();
+                                SocketAddress socketAddress = channel.remoteAddress();
+                                log.info("当前连接, channel:{}\t address:{}\n", channel, socketAddress);
                                 super.channelActive(ctx);
                             }
 
                             /**
-                             * 断开连接调用
+                             * 连接断开时
                              * @param ctx
                              * @throws Exception
                              */
@@ -57,31 +60,18 @@ public class FixedLengthServer {
                                 log.info("disconnect...");
                                 super.channelInactive(ctx);
                             }
-
-                            /**
-                             * 接收到客户端消息调用
-                             * @param ctx
-                             * @param msg
-                             * @throws Exception
-                             */
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                log.info("received message...");
-                                ByteBuf byteBuf = (ByteBuf) msg;
-                                String data = byteBuf.toString(Charset.defaultCharset());
-                                log.info("接收到数据：{}\n", data);
-                                super.channelRead(ctx, msg);
-                            }
                         });
                     }
-                }).bind(8080);
-
-        channelFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                Channel channel = future.channel();
-                log.info("connected channel:{}\n", channel);
-            }
-        });
+                })
+                .bind(8080);
+        try {
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            boss.shutdownGracefully();
+            worker.shutdownGracefully();
+            log.info("server stoped ......");
+        }
     }
 }
