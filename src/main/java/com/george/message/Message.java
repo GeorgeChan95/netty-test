@@ -46,6 +46,8 @@ public abstract class Message implements Serializable {
     public static final int GroupChatResponseMessage = 11;
     public static final int GroupMembersRequestMessage = 12;
     public static final int GroupMembersResponseMessage = 13;
+    public static final int PingMessage = 14;
+    public static final int PongMessage = 15;
 
     /**
      * 定义map，存储已知的消息类型
