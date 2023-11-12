@@ -1,5 +1,6 @@
 package com.george.protocol;
 
+import com.george.config.Config;
 import com.george.message.Message;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
@@ -42,7 +43,9 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         // 2. 1字节的版本号
         out.writeByte(1);
         // 3. 1字节的序列化类型(比如：0-jdk序列化 1-json序列化)
-        out.writeByte(0);
+        Serializer.Algorithm algorithm = Config.getSerializerAlgorithm(); // 获取配置的序列化方式
+        int ordinal = algorithm.ordinal(); // ordinal()方法返回枚举常量的位置，从0开始
+        out.writeByte(ordinal);
         // 4. 1字节的指令类型(例如：0-登录请求 1-登录响应)
         out.writeByte(msg.getMessageType());
         // 5. 4字节的请求序号
@@ -51,10 +54,12 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         out.writeByte(0xff);
 
         // 将消息对象序列化成字节流数组
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(msg);
-        byte[] bytes = bos.toByteArray();
+//        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//        ObjectOutputStream oos = new ObjectOutputStream(bos);
+//        oos.writeObject(msg);
+//        byte[] bytes = bos.toByteArray();
+        // 使用自定义序列化算法对消息进行序列化处理
+        byte[] bytes = Config.getSerializerAlgorithm().serialize(msg);
         // 6. 正文长度
         out.writeInt(bytes.length);
         // 7. 消息正文内容
@@ -89,10 +94,17 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         // 读取内容，写入到字节数组中
         byte[] bytes = new byte[length];
         in.readBytes(bytes, 0, length);
-        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-        ObjectInputStream ois = new ObjectInputStream(bis);
+//        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+//        ObjectInputStream ois = new ObjectInputStream(bis);
         // 将字节数组反序列化成原消息
-        Message message = (Message) ois.readObject();
+//        Message message = (Message) ois.readObject();
+
+        // 找到序列化算法
+        Serializer.Algorithm algorithm = Serializer.Algorithm.values()[serializerType];
+        // 获取消息类型
+        Class<? extends Message> messageClass = Message.getMessageClass(messageType);
+        // 调用自定义反序列化方法
+        Message message = algorithm.deserialize(messageClass, bytes);
         log.info("获取到消息：{},\t{},\t{},\t{},\t{}\n", magicNum, version, serializerType, messageType, sequenceId);
         log.info("反序列化消息内容：{}", message.toString());
         // 7. 解析出来的结果要放到 List<Object> 中给下一个Handler用，否则下面的handler获取不到消息
